@@ -94,17 +94,6 @@ function initial() {
   let endDate = new Date();
   endDate.setDate(endDate.getDate() + 30);
 
-  Company.create({
-    //  CompanyId: 1,
-    CompanyName: 'Global Load Dispatch',
-    ContactEmail: 'admin@loaddispatch.com.ng',
-    ContactPhone: '08057886381',
-    CompanyType: 'admin',
-    Address: 'Lagos',
-    City: 'LG',
-    Country: 'NG',
-  });
-
   Role.create({
     RoleId: shipperRoleId,
     Name: 'shipper',
@@ -132,6 +121,21 @@ function initial() {
     RoleId: auditorRoleId,
     Name: 'auditor',
   });
+
+
+  Company.create({
+    //  CompanyId: 1,
+    CompanyName: 'Global Load Dispatch',
+    ContactEmail: 'admin@loaddispatch.com.ng',
+    ContactPhone: '08057886381',
+    CompanyType: 'admin',
+    Address: 'Lagos',
+    City: 'LG',
+    Country: 'NG',
+  });
+
+  
+ 
 
   User.create({
     UserId: initialUserId,
