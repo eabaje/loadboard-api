@@ -1,16 +1,16 @@
 const db = require('../models/index.model');
-const Subscription = db.subscription;
+const Subscription = db.subscribe;
 const Op = db.Sequelize.Op;
 
 // Create and Save a new Subscription
 exports.create = (req, res) => {
   // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
+  // if (!req.body.title) {
+  //   res.status(400).send({
+  //     message: 'Content can not be empty!',
+  //   });
+  //   return;
+  // }
 
   // Create a Subscription
   const subscription = {
@@ -23,12 +23,13 @@ exports.create = (req, res) => {
     Duration: req.body.Duration,
   };
 
+  console.log('state:', subscription);
   // Save Subscription in the database
   Subscription.create(subscription)
 
     .then((data) => {
       res.status(200).send({
-        message: 'Success',
+        message: 'Subscription was added successfully',
         data: data,
       });
     })
@@ -39,12 +40,16 @@ exports.create = (req, res) => {
     });
 };
 
-// Retrieve all Subscriptions from the database.
+// Retrieve all Subscriptions start the database.
 exports.findAll = (req, res) => {
-  const SubscriptionName = req.query.SubscriptionName;
-  var condition = SubscriptionName ? { SubscriptionName: { [Op.iLike]: `%${SubscriptionName}%` } } : null;
+  const subscriptionName = req.params.subscriptionName;
+  var condition = subscriptionName ? { SubscriptionName: { [Op.iLike]: `%${subscriptionName}%` } } : null;
 
-  Subscription.findAll({ where: condition })
+  Subscription.findAll({ where: condition,
+    
+    order: [['createdAt', 'DESC']],
+  
+  })
 
     .then((data) => {
       res.status(200).send({
@@ -61,7 +66,8 @@ exports.findAll = (req, res) => {
 
 // Find a single Subscription with an id
 exports.findOne = (req, res) => {
-  const id = req.params.SubscriptionId;
+  const id = req.params.subscribeId;
+  console.log(`id`, id);
 
   Subscription.findByPk(id)
 
@@ -80,10 +86,10 @@ exports.findOne = (req, res) => {
 
 // Update a Subscription by the id in the request
 exports.update = (req, res) => {
-  const id = req.params.SubscriptionId;
+  const id = req.params.subscriptionId;
 
   Subscription.update(req.body, {
-    where: { SubscriptionId: id },
+    where: { SubscribeId: id },
   })
     .then((num) => {
       if (num == 1) {
@@ -108,7 +114,7 @@ exports.delete = (req, res) => {
   const id = req.params.SubscriptionId;
 
   Subscription.destroy({
-    where: { SubscriptionId: id },
+    where: { SubscribeId: id },
   })
     .then((num) => {
       if (num == 1) {
@@ -128,7 +134,7 @@ exports.delete = (req, res) => {
     });
 };
 
-// Delete all Subscriptions from the database.
+// Delete all Subscriptions start the database.
 exports.deleteAll = (req, res) => {
   Subscription.destroy({
     where: {},

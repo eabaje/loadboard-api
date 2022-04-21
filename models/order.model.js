@@ -12,7 +12,9 @@ module.exports = (sequelize, DataTypes) => {
     PaymentSessionId: { type: DataTypes.STRING },
     IsPaymentSuccessful: { type: DataTypes.BOOLEAN },
     OrderStatus: { type: DataTypes.STRING },
+    OrderDate: { type: DataTypes.DATE },
     PaymentMethod: { type: DataTypes.STRING },
+    Currency: { type: DataTypes.STRING },
   });
 
   return Order;

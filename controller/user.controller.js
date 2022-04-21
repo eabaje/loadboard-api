@@ -1,4 +1,6 @@
 require('dotenv').config();
+const path = require('path');
+var fs = require('fs');
 require('../config/nodemailer.config');
 const nodemailer = require('nodemailer');
 const bcrypt = require('bcryptjs');
@@ -7,84 +9,143 @@ const db = require('../models/index.model');
 
 const User = db.user;
 const UserSubscription = db.usersubscription;
+const Subscription = db.subscribe;
 const Company = db.company;
+const Role = db.role;
+const UserRole = db.userrole;
 const Op = db.Sequelize.Op;
 
 // Create and Save a new User
 exports.create = (req, res) => {
-  // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
-
-  // Create a User
-
-  const user = {
-    FullName: req.body.FullName,
-    Email: req.body.Email,
-    Phone: req.body.Phone,
-    Address: req.body.Address,
-    City: req.body.City,
-    Country: req.body.Country,
-    UserPicUrl: req.body.UserPicUrl,
-    Password: '',
-    // UserDocs: req.body.UserDocs
-  };
-  // Save User in the database
-
-  //exports.createUser = (req, res) => {
-  const email = req.body.Email;
-
-  const oldUser = User.findAll({ where: { Email: email } });
-
-  if (oldUser) {
-    return res.status(409).send('User Already Exist. Please Login');
-  }
-  //Encrypt user password
-  user.Password = bcrypt.hash(password, 10);
-  const newUser = User.create(user);
-
-  // .then(data => {
-  //   res.send(data);
-  // })
-  // .catch(err => {
-  //         res.status(500).send({
-  //             message:
-  //             err.message || "Some error occurred while creating the User."
-  //         });
-  //    });
-
-  const token = jwt.sign({ userid: User.UserId, email }, process.env.TOKEN_KEY, {
-    expiresIn: '2h',
-  });
-  // save user token
-  user.token = token;
-
-  const transporter = nodemailer.createTransport({
-    service: 'Gmail',
-    auth: {
-      user: process.env.EMAIL_USERNAME,
-      pass: process.env.EMAIL_PASSWORD,
+  User.findOne({
+    where: {
+      Email: req.body.Email,
     },
+  }).then((user) => {
+    if (user) {
+      return res.status(404).send({ message: 'Email already exists' });
+    }
   });
 
-  // Step 2 - Generate a verification token with the user's ID
-  const verificationToken = user.generateVerificationToken();
-  // Step 3 - Email the user a unique verification link
-  const url = process.env.BASE_URL + '/verify/${token}';
-  transporter.sendMail({
-    to: email,
-    subject: 'Verify Account',
-    html: `Click <a href = '${url}'>here</a> to confirm your email.`,
-  });
-  return res.status(201).send({
-    message: `Sent a verification email to ${email}`,
-  });
+  Company.create({
+    CompanyName: req.body.CompanyName,
+    ContactEmail: req.body.ContactEmail,
+    ContactPhone: req.body.ContactPhone,
+    Address: req.body.CompanyAddress,
+    Region: req.body.Region,
+    Country: req.body.Country,
+    CompanyType: req.body.RoleType,
+    Specilaization: req.body.Specilaization,
+  })
+    .then((company) => {
+      //const company = Company.save();
+      const encryptedPassword = req.body.Password
+        ? bcrypt.hashSync(req.body.Password, 10)
+        : bcrypt.hashSync(generator.generate({ length: 8, numbers: true }), 10);
 
-  // };
+      //console.log('Password:', encryptedPassword);
+      const email = req.body.ContactEmail ? req.body.ContactEmail : req.body.Email;
+      const fullname = req.body.FullName ? req.body.FullName : req.body.FirstName + ' ' + req.body.LastName;
+
+      User.create({
+        CompanyId: company.CompanyId,
+        FullName: req.body.FullName ? req.body.FullName : req.body.FirstName + ' ' + req.body.LastName,
+        Email: req.body.Email.toLowerCase(),
+        Phone: req.body.Phone,
+        Address: req.body.Address,
+        City: req.body.Region,
+        Country: req.body.Country,
+        UserName: req.body.Email.toLowerCase(),
+        AcceptTerms: req.body.AcceptTerms,
+        PaymentMethod: req.body.PaymentMethod,
+        Password: encryptedPassword,
+      })
+        .then((user) => {
+          console.log(`RoleType`, req.body.RoleType);
+          if (req.body.RoleType) {
+            Role.findOne({
+              where: {
+                Name: req.body.RoleType,
+              },
+            }).then((role) => {
+              UserRole.create({ UserId: user.UserId, RoleId: role.RoleId });
+
+              // Add User Subscription
+              // user.setRoles(roles).then(() => {
+              const token = jwt.sign({ UserId: user.UserId }, `${process.env.TOKEN_KEY}`, {
+                expiresIn: '2h',
+              });
+              // save user token
+              user.Token = token;
+              user.save();
+
+              const transporter = nodemailer.createTransport({
+                service: `${process.env.MAIL_SERVICE}`,
+                auth: {
+                  user: `${process.env.EMAIL_USERNAME}`,
+                  pass: `${process.env.EMAIL_PASSWORD}`,
+                },
+              });
+              // //  mailgun
+              // // Step 2 - Generate a verification token with the user's ID
+              // const verificationToken = user.generateVerificationToken();
+              // // Step 3 - Email the user a unique verification link
+
+              // point to the template folder
+              const handlebarOptions = {
+                viewEngine: {
+                  partialsDir: path.resolve('./views/'),
+                  defaultLayout: false,
+                },
+                viewPath: path.resolve('./views/'),
+              };
+
+              // use a template file with nodemailer
+              transporter.use('compile', hbs(handlebarOptions));
+
+              const url = `${process.env.BASE_URL}` + `auth/verify/${token}`;
+              transporter
+                .sendMail({
+                  from: `${process.env.FROM_EMAIL}`,
+                  to: email,
+                  template: 'email2', // the name of the template file i.e email.handlebars
+                  context: {
+                    name: fullname,
+                    url: url,
+                  },
+                  subject: 'Welcome to Global Load Dispatch',
+                  //     html: `<h1>Email Confirmation</h1>
+                  // <h2>Hello ${fullname}</h2>
+
+                  // <p>By signing up for a free 90 day trial with Load Dispatch Service, you can connect with carriers,shippers and drivers.<br/></p>
+                  // To finish up the process kindly click on the link to confirm your email <a href = '${url}'>Click here</a>
+                  // </div>`,
+                })
+                .then((info) => {
+                  console.log({ info });
+                })
+                .catch(console.error);
+
+              res.status(200).send({ message: 'User registered successfully!' });
+              // });
+            });
+            // } else {
+            //   // user role = 1
+            //   user.setRoles([1]).then(() => {
+            //     res.send({ message: 'User registered successfully!' });
+            //   });
+          }
+        })
+
+        .catch((err) => {
+          res.status(500).send({ message: err.message });
+        });
+    })
+
+    .catch((err) => {
+      console.log(`err`, err);
+      res.status(500).send({ message: 'Company Error:' + err.message });
+    });
 };
 
 // Retrieve all Users from the database.
@@ -92,7 +153,20 @@ exports.findAll = (req, res) => {
   // const name = req.params.name;
   //var condition = name ? { FullName: { [Op.iLike]: `%${name}%` } } : null;{ where: condition }
 
-  User.findAll()
+  User.findAll({
+    include: [
+      {
+        model: Company,
+        attributes: ['CompanyName', 'CompanyType', 'CompanyId'],
+      },
+      {
+        model: Role,
+        attributes: ['Name'],
+      },
+    ],
+
+    order: [['createdAt', 'DESC']],
+  })
     .then((data) => {
       res.status(200).send({
         message: 'Success',
@@ -110,7 +184,21 @@ exports.findAllBySearch = (req, res) => {
   const name = req.params.name;
   var condition = name ? { FullName: { [Op.iLike]: `%${name}%` } } : null;
 
-  User.findAll({ where: condition })
+  User.findAll({
+    where: condition,
+    include: [
+      {
+        model: Company,
+        attributes: ['CompanyName'],
+      },
+      {
+        model: Role,
+        attributes: ['Name'],
+      },
+    ],
+
+    order: [['createdAt', 'DESC']],
+  })
     .then((data) => {
       res.status(200).send({
         message: 'Success',
@@ -126,9 +214,22 @@ exports.findAllBySearch = (req, res) => {
 
 // Find a single User with an id
 exports.findOne = (req, res) => {
-  const id = req.params.UserId;
+  const id = req.params.userId;
 
-  User.findByPk(id)
+  User.findOne({
+    where: { UserId: id },
+    include: [
+      {
+        model: Company,
+        attributes: ['CompanyName'],
+      },
+      {
+        model: Role,
+        attributes: ['Name'],
+      },
+    ],
+    order: [['createdAt', 'DESC']],
+  })
     .then((data) => {
       res.status(200).send({
         message: 'Success',
@@ -136,6 +237,7 @@ exports.findOne = (req, res) => {
       });
     })
     .catch((err) => {
+      console.log('err', err);
       res.status(500).send({
         message: 'Error retrieving User with UserId=' + id,
       });
@@ -144,11 +246,12 @@ exports.findOne = (req, res) => {
 
 // Update a User by the id in the request
 exports.update = (req, res) => {
-  const user = ({ UserId, FullName, Email, Phone, Address, City, Country, UserPicUrl } = req.body);
   const id = req.body.UserId;
 
+  const imagePath = req.file.filename;
+
   User.update(req.body, {
-    where: { id: id },
+    where: { UserId: id },
   })
     .then((num) => {
       if (num == 1) {
@@ -166,6 +269,103 @@ exports.update = (req, res) => {
         message: 'Error updating User with id=' + id,
       });
     });
+};
+
+exports.updateUserRole = (req, res) => {
+  const id = req.body.UserId;
+
+  UserRole.update(req.body, {
+    where: { UserId: id },
+  })
+    .then((num) => {
+      if (num == 1) {
+        res.send({
+          message: 'User Role was updated successfully.',
+        });
+      } else {
+        res.send({
+          message: `Cannot update User Role with id=${id}. Maybe User was not found or req.body is empty!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: 'Error updating User with id=' + id,
+      });
+    });
+};
+
+exports.updateFile = (req, res) => {
+  // console.log('req.body.UserId', req.body.UserId);
+  User.findOne({
+    where: {
+      UserId: req.body.UserId,
+    },
+  }).then((user) => {
+    if (user) {
+      console.log('user', user);
+      const uploadFile = req.file ? req.file : null;
+
+      const picpath = uploadFile ? `${user.CompanyId}/${user.Email}/${uploadFile.originalname}` : '';
+
+      var condition = req.body.FileType === 'image' ? { UserPicUrl: picpath } : { UserPicUrl: picpath };
+      console.log('condition', condition);
+      User.update(condition, {
+        where: { UserId: req.body.UserId },
+      })
+        .then((num) => {
+          if (num == 1) {
+            res.send({
+              message: 'File uploaded successfully.',
+            });
+          } else {
+            res.send({
+              message: `Cannot update Driver with id=${id}. Maybe Driver was not found or req.body is empty!`,
+            });
+          }
+        })
+        .catch((err) => {
+          res.status(500).send({
+            message: 'Error updating Driver with id=' + id,
+          });
+        });
+    } else {
+      res.status(500).send({
+        message: 'Error updating the record',
+      });
+    }
+  });
+
+  // const dir = `./uploads/${req.body.CompanyId}/${req.body.Email}`;
+  // fs.exists(dir, (exist) => {
+  //   if (!exist) {
+  //     return fs.mkdir(dir, { recursive: true }, (err, info) => {
+  //          console.log(err);
+  //         });
+  //   }
+  // });
+};
+
+exports.changeImageProfile = async (req, res = response) => {
+  try {
+    const imagePath = req.file.filename;
+
+    const imagedb = await pool.query('SELECT image FROM person WHERE uid = ?', [req.uid]);
+
+    await fs.unlink(path.resolve('src/Uploads/Profile/' + imagedb[0].image));
+
+    await pool.query('UPDATE person SET image = ? WHERE uid = ?', [imagePath, req.uid]);
+
+    res.json({
+      resp: true,
+      msg: 'Picture changed',
+    });
+  } catch (e) {
+    return res.status(500).json({
+      resp: false,
+      msg: e,
+    });
+  }
 };
 
 // Delete a User with the specified id in the request
@@ -220,7 +420,12 @@ exports.findAllUsersByDate = (req, res) => {
         [Op.between]: [new Date(Date(startDate)), new Date(Date(endDate))],
       },
     },
-    order: [['createdAt', 'ASC']],
+    include: {
+      model: Company,
+      attributes: ['CompanyName'],
+    },
+
+    order: [['createdAt', 'DESC']],
   })
     .then((data) => {
       res.status(200).send({
@@ -236,14 +441,95 @@ exports.findAllUsersByDate = (req, res) => {
     });
 };
 
+//get Roles
+
+exports.findRoles = (req, res) => {
+  const name = req.params.name;
+  var condition = name ? { Name: { [Op.iLike]: `%${name}%` } } : null;
+
+  Role.findAll({ where: condition })
+    .then((data) => {
+      res.status(200).send({
+        message: 'Success',
+        data: data,
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || 'Some error occurred while retrieving Users.',
+      });
+    });
+};
+
+exports.findUserRoles = (req, res) => {
+  const userId = req.params.userId;
+  var condition = userId ? { UserId: userId } : null;
+
+  UserRole.findAll({ where: condition })
+    .then((data) => {
+      res.status(200).send({
+        message: 'Success',
+        data: data,
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || 'Some error occurred while retrieving Users.',
+      });
+    });
+};
+
+exports.updateRole = (req, res) => {
+  const id = req.params.roleId;
+
+  Role.update(req.body, {
+    where: { RoleId: id },
+  })
+    .then((num) => {
+      if (num == 1) {
+        res.send({
+          message: 'Role was updated successfully.',
+        });
+      } else {
+        res.send({
+          message: `Cannot update Role with id=${id}. Maybe Company was not found or req.body is empty!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: 'Error updating Role with id=' + id,
+      });
+    });
+};
+
+exports.deleteRole = (req, res) => {
+  const id = req.params.roleId;
+
+  Role.destroy({
+    where: { RoleId: id },
+  })
+    .then((num) => {
+      if (num == 1) {
+        res.send({
+          message: 'Role was deleted successfully!',
+        });
+      } else {
+        res.send({
+          message: `Cannot delete Role with id=${id}. Maybe Company was not found!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: 'Could not delete Role with id=' + id,
+      });
+    });
+};
+
 exports.createCompany = (req, res) => {
   // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
+
   // Create a Order
   const company = {
     CompanyName: req.body.CompanyName,
@@ -259,7 +545,7 @@ exports.createCompany = (req, res) => {
 
     .then((data) => {
       res.status(200).send({
-        message: 'Success',
+        message: 'Company was added successfully',
         data: data,
       });
     })
@@ -295,9 +581,9 @@ exports.updateCompany = (req, res) => {
 };
 
 exports.findCompany = (req, res) => {
-  const id = req.params.CompanyId;
+  const id = req.params.companyId;
 
-  Company.findByPk(id)
+  Company.findOne({ where: { CompanyId: id } })
 
     .then((data) => {
       res.status(200).send({
@@ -313,7 +599,7 @@ exports.findCompany = (req, res) => {
 };
 
 exports.findAllCompanys = (req, res) => {
-  const CompanyType = req.query.CompanyType;
+  const CompanyType = req.query.companyType;
   var condition = CompanyType ? { CompanyType: { [Op.iLike]: `%${CompanyType}%` } } : null;
 
   Company.findAll({ where: condition })
@@ -359,7 +645,7 @@ exports.findAllCompanysByDate = (req, res) => {
 };
 
 exports.deleteCompany = (req, res) => {
-  const id = req.params.CompanyId;
+  const id = req.params.companyId;
 
   Company.destroy({
     where: { CompanyId: id },
@@ -383,39 +669,44 @@ exports.deleteCompany = (req, res) => {
 };
 
 exports.subscribe = (req, res) => {
-  // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
-
   // Add user to Subscription
-
-  const subscribe = {
-    SubscriptionId: req.body.SubscriptionId,
-    SubscriptionName: req.body.SubscriptionName,
-    UserId: req.body.UserId,
-    Active: req.body.Active,
-    StartDate: req.body.StartDate,
-    EndDate: req.body.EndDate,
-  };
 
   const UserId = req.body.UserId;
 
-  const IsSubscribed = UserSubscription.findAll({ where: { UserId: UserId } && { Active: true } });
+  const IsSubscribed = UserSubscription.findAll({ where: { UserId: UserId, Active: true } });
 
   if (IsSubscribed) {
     return res.status(409).send('User Already Subscribed. Do you want to upgrade your subscription?');
   }
 
-  const UserSubscribed = UserSubscription.create(subscribe);
+  // Get the subscription package
+
+  Subscription.findOne({ where: { SubscribeId: req.body.SubscriptionId } }).then((subscribeRes) => {
+    let startDate = new Date();
+
+    let endDate = new Date();
+    endDate.setDate(endDate.getDate() + parsInt(subscribeRes.Duration));
+
+    const subscribe = {
+      SubscriptionId: req.body.SubscriptionId,
+      SubscriptionName: req.body.SubscriptionName,
+      UserId: req.body.UserId,
+      Active: true,
+      StartDate: startDate,
+      EndDate: endDate,
+    };
+
+    UserSubscription.create(subscribe).then((UserSubscribed) => {
+      if (UserSubscribed) {
+        return res.status(201).send({ message: `User Subscribed to  ${subscribeRes.SubscriptionName} package.` });
+      }
+    });
+  });
 
   const User = User.findOne({ where: { UserId: UserId } });
 
   const transporter = nodemailer.createTransport({
-    service: 'Gmail',
+    service: process.env.MAIL_SERVICE,
     auth: {
       user: process.env.EMAIL_USERNAME,
       pass: process.env.EMAIL_PASSWORD,
@@ -435,37 +726,52 @@ exports.subscribe = (req, res) => {
 };
 
 exports.upgradeUserSubscription = (req, res) => {
-  const subscribe = {
-    SubscriptionId: req.body.SubscriptionId,
-    SubscriptionName: req.body.SubscriptionName,
-    UserId: req.body.UserId,
-    Active: req.body.Active,
-    StartDate: req.body.StartDate,
-    EndDate: req.body.EndDate,
-  };
-
   const id = req.body.UserSubscriptionId;
 
   const UserId = req.body.UserId;
 
-  const IsSubscribed = UserSubscription.findAll({ where: { UserId: UserId } && { Active: true } });
+  UserSubscription.findAll({ where: { UserId: UserId, Active: true } })
 
-  if (IsSubscribed) {
-    UserSubscription.update(
-      { Active: false },
-      {
-        where: {
-          UserId: UserId,
-        },
-      },
-    );
+    .then((IsSubscribed) => {
+      if (IsSubscribed) {
+        UserSubscription.update(
+          { Active: false },
+          {
+            where: {
+              UserId: UserId,
+            },
+          },
+        );
+      }
 
-    const UserSubscribed = UserSubscription.create(subscribe);
+      // Get the subscription package
+      console.log('req.body.SubscriptionId', req.body.SubscriptionId);
+      Subscription.findOne({ where: { SubscribeId: req.body.SubscriptionId } }).then((subscribeRes) => {
+        console.log('subscribeRes', subscribeRes);
+        let startDate = new Date();
 
-    if (UserSubscribed) {
-      return res.status(201).send({ message: `User Subscribed to  ${UserSubscribed.SubscriptionName} package.` });
-    }
-  }
+        let endDate = new Date();
+        endDate.setDate(endDate.getDate() + parseInt(subscribeRes.Duration));
+
+        const subscribe = {
+          SubscribeId: req.body.SubscriptionId,
+          SubscriptionName: subscribeRes.SubscriptionName,
+          UserId: req.body.UserId,
+          Active: true,
+          StartDate: startDate,
+          EndDate: endDate,
+        };
+
+        UserSubscription.create(subscribe).then((UserSubscribed) => {
+          if (UserSubscribed) {
+            return res.status(201).send({ message: `User Subscribed to  ${subscribeRes.SubscriptionName} package.` });
+          }
+        });
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({ message: err.message });
+    });
 };
 
 exports.updateUserSubscription = (req, res) => {
@@ -493,9 +799,16 @@ exports.updateUserSubscription = (req, res) => {
 };
 
 exports.findUserSubscription = (req, res) => {
-  const id = req.params.UserId;
+  const id = req.params.userId;
 
-  UserSubscription.findOne({ where: { UserId: id } })
+  UserSubscription.findOne({
+    where: { UserId: id, Active: true },
+
+    include: {
+      model: User,
+      attributes: ['FullName', 'Email', 'PaymentMethod', 'Currency'],
+    },
+  })
 
     .then((data) => {
       res.status(200).send({
@@ -504,6 +817,7 @@ exports.findUserSubscription = (req, res) => {
       });
     })
     .catch((err) => {
+      console.log(`error`, err);
       res.status(500).send({
         message: 'Error retrieving User with UserId=' + id,
       });
@@ -511,12 +825,20 @@ exports.findUserSubscription = (req, res) => {
 };
 
 exports.findAllUserSubscriptions = (req, res) => {
-  const SubscriptionType = req.query.SubscriptionType;
-  var condition = SubscriptionType ? { SubscriptionType: { [Op.iLike]: `%${SubscriptionType}%` } } : null;
+  const subscriptionId = req.param.subscriptionId;
+  var condition = subscriptionId ? { SubscribeId: subscriptionId } : null;
 
-  UserSubscription.findAll({ where: condition })
+  UserSubscription.findAll({
+    where: condition,
+    include: {
+      model: User,
+      attributes: ['FullName', 'Email', 'PaymentMethod', 'Currency'],
+    },
+    order: [['createdAt', 'DESC']],
+  })
 
     .then((data) => {
+      console.log(`data`, data);
       res.status(200).send({
         message: 'Success',
         data: data,
@@ -539,7 +861,12 @@ exports.findAllUserSubscriptionsByDate = (req, res) => {
         [Op.between]: [new Date(Date(startDate)), new Date(Date(endDate))],
       },
     },
-    order: [['createdAt', 'ASC']],
+    include: {
+      model: User,
+      attributes: ['FullName', 'Email', 'PaymentMethod', 'Currency'],
+    },
+
+    order: [['createdAt', 'DESC']],
   })
 
     .then((data) => {
@@ -565,6 +892,10 @@ exports.findAllUserSubscriptionsByStartDate = (req, res) => {
       StartDate: {
         [Op.between]: [new Date(Date(startDate)), new Date(Date(endDate))],
       },
+    },
+    include: {
+      model: User,
+      attributes: ['FullName', 'Email', 'PaymentMethod', 'Currency'],
     },
     order: [['createdAt', 'ASC']],
   })
@@ -593,7 +924,11 @@ exports.findAllUserSubscriptionsByEndDate = (req, res) => {
         [Op.between]: [new Date(Date(startDate)), new Date(Date(endDate))],
       },
     },
-    order: [['createdAt', 'ASC']],
+    include: {
+      model: User,
+      attributes: ['FullName', 'Email', 'PaymentMethod', 'Currency'],
+    },
+    order: [['createdAt', 'DESC']],
   })
 
     .then((data) => {

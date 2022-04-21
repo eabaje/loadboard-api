@@ -26,7 +26,7 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
       defaultValue: DataTypes.UUIDV1,
     },
-    CarrierId: { type: DataTypes.STRING },
+    // CarrierId: { type: DataTypes.STRING },
     VehicleType: { type: DataTypes.STRING, default: null },
     VehicleNumber: { type: DataTypes.STRING },
     SerialNumber: { type: DataTypes.STRING },
@@ -34,11 +34,21 @@ module.exports = (sequelize, DataTypes) => {
     VehicleColor: { type: DataTypes.STRING },
     VehicleModel: { type: DataTypes.STRING },
     LicensePlate: { type: DataTypes.STRING },
-    VehicleModelYear: { type: DataTypes.DATE },
-    PurchaseYear: { type: DataTypes.DATE },
+    VehicleModelYear: { type: DataTypes.DATEONLY },
+    PurchaseYear: { type: DataTypes.DATEONLY },
     Insured: { type: DataTypes.BOOLEAN },
     PicUrl: { type: DataTypes.STRING },
+    Description: { type: DataTypes.STRING },
+
     VehicleDocs: { type: DataTypes.STRING },
+
+    // CarrierId: {
+    //   type: DataTypes.STRING,
+    //   references: {
+    //     model: Carrier,
+    //     key: 'CarrierId'
+    //   }
+    // },
   });
 
   return Vehicle;

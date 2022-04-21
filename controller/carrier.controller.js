@@ -1,16 +1,12 @@
 const db = require('../models/index.model');
 const Carrier = db.carrier;
+const Company = db.company;
 const Op = db.Sequelize.Op;
 
 // Create and Save a new Carrier
 exports.create = (req, res) => {
   // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
+
   // Create a Carrier
   const carrier = {
     CarrierType: req.body.CarrierType,
@@ -29,11 +25,12 @@ exports.create = (req, res) => {
 
     .then((data) => {
       res.status(200).send({
-        message: 'Success',
+        message: 'Carrier information added successfully',
         data: data,
       });
     })
     .catch((err) => {
+      console.log(`error`, err.message);
       res.status(500).send({
         message: err.message || 'Some error occurred while creating the Carrier.',
       });
@@ -42,10 +39,23 @@ exports.create = (req, res) => {
 
 // Retrieve all Carriers from the database.
 exports.findAll = (req, res) => {
-  const carrierType = req.query.CarrierType;
-  var condition = CarrierType ? { CarrierType: { [Op.iLike]: `%${carrierType}%` } } : null;
+  const carrierType = req.params.carrierType;
+  var condition = carrierType ? { CarrierType: { [Op.iLike]: `%${carrierType}%` } } : null;
 
-  Carrier.findAll({ where: condition })
+  // Carrier.findAll({ where: condition })
+
+  Carrier.findAll({
+    // where: {
+    //   condition
+    // },
+    // attributes: {
+    //     exclude: ['createdAt', 'updatedAt']   DairyId: req.query.dairyid
+    // },
+    include: {
+      model: Company,
+      attributes: ['CompanyName'],
+    },
+  })
 
     .then((data) => {
       res.status(200).send({
@@ -60,11 +70,25 @@ exports.findAll = (req, res) => {
     });
 };
 
+// sequelize.query("SELECT * FROM `users`", { type: sequelize.QueryTypes.SELECT})
+//   .then(function(users) {
+//     // We don't need spread here, since only the results will be returned for select queries
+//   })
+
 // Find a single Carrier with an id
 exports.findOne = (req, res) => {
   const id = req.params.carrierId;
 
-  Carrier.findByPk(id)
+  Carrier.findOne({
+    where: {
+      CarrierId: id,
+    },
+
+    include: {
+      model: Company,
+      attributes: ['CompanyName'],
+    },
+  })
 
     .then((data) => {
       res.status(200).send({
@@ -73,6 +97,7 @@ exports.findOne = (req, res) => {
       });
     })
     .catch((err) => {
+      console.log(`err`, err);
       res.status(500).send({
         message: 'Error retrieving Carrier with CarrierId=' + id,
       });
@@ -84,15 +109,15 @@ exports.update = (req, res) => {
   const id = req.params.carrierId;
 
   Carrier.update(req.body, {
-    where: { id: id },
+    where: { CarrierId: id },
   })
     .then((num) => {
       if (num == 1) {
-        res.send({
+        res.status(200).send({
           message: 'Carrier was updated successfully.',
         });
       } else {
-        res.send({
+        res.status(200).send({
           message: `Cannot update Carrier with id=${id}. Maybe Carrier was not found or req.body is empty!`,
         });
       }
@@ -109,15 +134,15 @@ exports.delete = (req, res) => {
   const id = req.params.carrierId;
 
   Carrier.destroy({
-    where: { id: id },
+    where: { CarrierId: id },
   })
     .then((num) => {
       if (num == 1) {
-        res.send({
+        res.status(200).send({
           message: 'Carrier was deleted successfully!',
         });
       } else {
-        res.send({
+        res.status(200).send({
           message: `Cannot delete Carrier with id=${id}. Maybe Carrier was not found!`,
         });
       }
@@ -136,7 +161,7 @@ exports.deleteAll = (req, res) => {
     truncate: false,
   })
     .then((nums) => {
-      res.send({ message: `${nums} Carriers were deleted successfully!` });
+      res.status(200).send({ message: `${nums} Carriers were deleted successfully!` });
     })
     .catch((err) => {
       res.status(500).send({
@@ -147,7 +172,14 @@ exports.deleteAll = (req, res) => {
 
 // find all insured Carrier
 exports.findAllCarriersLicensed = (req, res) => {
-  Carrier.findAll({ where: { Licensed: true } })
+  Carrier.findAll({
+    where: { Licensed: true },
+
+    include: {
+      model: Company,
+      attributes: ['CompanyName'],
+    },
+  })
 
     .then((data) => {
       res.status(200).send({
@@ -167,13 +199,18 @@ exports.findAllCarriersByDate = (req, res) => {
   const startDate = req.params.StartDate;
   const endDate = req.params.EndDate;
 
-  Shipment.findAll({
+  Carrier.findAll({
     where: {
       createdAt: {
         [Op.between]: [new Date(Date(startDate)), new Date(Date(endDate))],
       },
     },
     order: [['createdAt', 'ASC']],
+
+    include: {
+      model: Company,
+      attributes: ['CompanyName'],
+    },
   })
 
     .then((data) => {

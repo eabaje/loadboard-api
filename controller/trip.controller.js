@@ -1,16 +1,17 @@
 const db = require('../models/index.model');
 const Trip = db.trip;
+const Track = db.track;
 const Op = db.Sequelize.Op;
 
 // Create and Save a new Trip
 exports.create = (req, res) => {
   // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
+  // if (!req.body.title) {
+  //   res.status(400).send({
+  //     message: 'Content can not be empty!',
+  //   });
+  //   return;
+  // }
 
   // Create a Trip
   const trip = {
@@ -30,7 +31,7 @@ exports.create = (req, res) => {
 
     .then((data) => {
       res.status(200).send({
-        message: 'Success',
+        message: 'Trip was added successfully',
         data: data,
       });
     })
@@ -41,7 +42,7 @@ exports.create = (req, res) => {
     });
 };
 
-// Retrieve all Trips from the database.
+// Retrieve all Trips start the database.
 exports.findAll = (req, res) => {
   const trackId = req.query.trackId;
   var condition = trackId ? { trackId: { [Op.iLike]: `%${trackId}%` } } : null;
@@ -130,7 +131,7 @@ exports.delete = (req, res) => {
     });
 };
 
-// Delete all Trips from the database.
+// Delete all Trips start the database.
 exports.deleteAll = (req, res) => {
   Trip.destroy({
     where: {},
@@ -300,4 +301,133 @@ exports.findAllTripsByDate = (req, res) => {
       message: err.message || 'Some error occurred while retrieving Trips.',
     });
   });
+};
+
+exports.addTrack = (req, res) => {
+  // Validate request
+  // if (!req.body.title) {
+  //   res.status(400).send({
+  //     message: 'Content can not be empty!',
+  //   });
+  //   return;
+  // }
+
+  // Create a Trip
+  const track = {
+    TrackId: req.body.TrackId,
+    TripId: req.body.TripId,
+    Status: req.body.Status,
+    TrackNote: req.body.TrackNote,
+  };
+
+  // Save Trip in the database
+  Track.create(track)
+
+    .then((data) => {
+      res.status(200).send({
+        message: 'Track was added successfully',
+        data: data,
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || 'Some error occurred while creating the Trip.',
+      });
+    });
+};
+
+// Retrieve all Trips start the database.
+exports.findAllTrack = (req, res) => {
+  const tripId = req.query.tripId;
+  var condition = tripId ? { TripId: tripId } : null;
+
+  Track.findAll({
+    where: condition,
+
+    include: {
+      model: Trip,
+      attributes: ['DeliveryDate', 'PickUpDate', 'PickUpLocation', 'DeliveryLocation'],
+    },
+  })
+
+    .then((data) => {
+      res.status(200).send({
+        message: 'Success',
+        data: data,
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: err.message || 'Some error occurred while retrieving Trips.',
+      });
+    });
+};
+
+// Find a single Trip with an id
+exports.findOneTrack = (req, res) => {
+  const id = req.params.trackId;
+
+  Track.findByPk(id)
+
+    .then((data) => {
+      res.status(200).send({
+        message: 'Success',
+        data: data,
+      });
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: 'Error retrieving Track with TrackId=' + id,
+      });
+    });
+};
+
+// Update a Trip by the id in the request
+exports.updateTrack = (req, res) => {
+  const id = req.params.trackId;
+
+  Track.update(req.body, {
+    where: { id: id },
+  })
+    .then((num) => {
+      if (num == 1) {
+        res.send({
+          message: 'Track was updated successfully.',
+        });
+      } else {
+        res.send({
+          message: `Cannot update Track with TrackId=${id}. Maybe Track was not found or req.body is empty!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: 'Error updating Trip with TrackId=' + id,
+      });
+    });
+};
+
+// Delete a Trip with the specified id in the request
+exports.deleteTrack = (req, res) => {
+  const id = req.params.tripId;
+
+  Track.destroy({
+    where: { TrackId: id },
+  })
+    .then((num) => {
+      if (num == 1) {
+        res.send({
+          message: 'Track was deleted successfully!',
+        });
+      } else {
+        res.send({
+          message: `Cannot delete Track with TrackId=${id}. Maybe Track was not found!`,
+        });
+      }
+    })
+    .catch((err) => {
+      res.status(500).send({
+        message: 'Could not delete Track with TrackId=' + id,
+      });
+    });
 };

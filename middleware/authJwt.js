@@ -1,9 +1,26 @@
 const jwt = require('jsonwebtoken');
-const config = require('../config/auth.config.js');
+//const config = require('../config/auth.config.js');
 const db = require('../models/index.model.js');
 const User = db.user;
 
-verifyToken = (req, res, next) => {
+const config = process.env;
+
+ verifyToken = (req, res, next) => {
+  const token = req.body.token || req.query.token || req.headers['x-access-token'];
+
+  if (!token) {
+    return res.status(403).send('A token is required for authentication');
+  }
+  try {
+    const decoded = jwt.verify(token, config.TOKEN_KEY);
+    req.user = decoded;
+  } catch (err) {
+    return res.status(401).send('Invalid Token');
+  }
+  return next();
+};
+
+verifyTokenv1 = (req, res, next) => {
   let token = req.headers['x-access-token'];
 
   if (!token) {
@@ -21,6 +38,23 @@ verifyToken = (req, res, next) => {
     req.userId = decoded.id;
     next();
   });
+};
+
+isAuth = (req, res, next) => {
+  const authorization = req.headers.authorization;
+  if (authorization) {
+    const token = authorization.slice(7, authorization.length); // Bearer XXXXXX
+    jwt.verify(token, config.secret || 'somethingsecret', (err, decode) => {
+      if (err) {
+        res.status(401).send({ message: 'Invalid Token' });
+      } else {
+        req.user = decode;
+        next();
+      }
+    });
+  } else {
+    res.status(401).send({ message: 'No Token' });
+  }
 };
 
 isAdmin = (req, res, next) => {
@@ -114,12 +148,28 @@ isAuditorOrAdmin = (req, res, next) => {
   });
 };
 
+checkRolesExisted = (req, res, next) => {
+  if (req.body.roles) {
+    for (let i = 0; i < req.body.roles.length; i++) {
+      if (!ROLES.includes(req.body.roles[i])) {
+        res.status(400).send({
+          message: 'Failed! Role does not exist = ' + req.body.roles[i],
+        });
+        return;
+      }
+    }
+  }
+
+  next();
+};
 const authJwt = {
   verifyToken: verifyToken,
+  isAuth: isAuth,
   isAdmin: isAdmin,
   isShipper: isShipper,
   isCarrier: isCarrier,
   isDriver: isDriver,
   isAuditorOrAdmin: isAuditorOrAdmin,
+  checkRolesExisted: checkRolesExisted,
 };
 module.exports = authJwt;

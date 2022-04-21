@@ -6,13 +6,14 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
     },
 
-    UserId: { type: DataTypes.STRING },
-    OrderId: { type: DataTypes.STRING },
+   // OrderId: { type: DataTypes.STRING },
     TotalPrice: { type: DataTypes.DECIMAL },
     PaymentSessionId: { type: DataTypes.STRING },
     ReferenceId: { type: DataTypes.STRING },
     OrderStatus: { type: DataTypes.STRING },
     PaymentMethod: { type: DataTypes.STRING },
+    PaymentDate: { type: DataTypes.DATEONLY },
+    Currency: { type: DataTypes.STRING },
   });
 
   return Payment;

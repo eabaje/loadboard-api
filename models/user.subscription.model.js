@@ -6,12 +6,28 @@ module.exports = (sequelize, DataTypes) => {
       primaryKey: true,
     },
 
-    SubscriptionId: { type: DataTypes.INTEGER },
+    // SubscriptionId: { type: DataTypes.INTEGER },
     SubscriptionName: { type: DataTypes.STRING },
-    UserId: { type: DataTypes.STRING },
+    // UserId: { type: DataTypes.STRING },
     Active: { type: DataTypes.BOOLEAN },
-    StartDate: { type: DataTypes.DATE },
-    EndDate: { type: DataTypes.DATE },
+    StartDate: { type: DataTypes.DATEONLY },
+    EndDate: { type: DataTypes.DATEONLY },
+
+    // UserId: {
+    //   type: DataTypes.STRING,
+    //   references: {
+    //     model: User,
+    //     key: 'UserId'
+    //   }
+    // },
+
+    // SubscriptionId: {
+    //   type: DataTypes.INTEGER,
+    //   references: {
+    //     model: Subscription,
+    //     key: 'SubscriptionId'
+    //   }
+    // },
   });
 
   return UserSubscription;

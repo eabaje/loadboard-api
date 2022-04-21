@@ -6,13 +6,6 @@ const stripe = require('stripe')(process.env.STRIPE_KEY);
 
 // Create and Save a new Payment
 exports.create = (req, res) => {
-  // Validate request
-  if (!req.body.title) {
-    res.status(400).send({
-      message: 'Content can not be empty!',
-    });
-    return;
-  }
   // Create a Payment
   const payment = {
     UserId: req.body.UserId,
@@ -23,7 +16,7 @@ exports.create = (req, res) => {
     OrderStatus: req.body.OrderStatus,
     // Licensed: req.body.Licensed ? req.body.Licensed : false,
     PaymentMethod: req.body.PaymentMethod,
-    // PaymentDocs: req.body.PaymentDocs
+    PaymentDate: req.body.PaymentDate,
   };
 
   // Save Payment in the database
@@ -36,6 +29,7 @@ exports.create = (req, res) => {
       });
     })
     .catch((err) => {
+      console.log('err', err);
       res.status(500).send({
         message: err.message || 'Some error occurred while creating the Payment.',
       });
@@ -68,8 +62,8 @@ exports.StripecheckoutFirst = async (req, res) => {
 };
 
 // exports.stripecheckoutSecond = (req, res) => {
-//   // Moreover you can take more details from user
-//   // like Address, Name, etc from form
+//   // Moreover you can take more details start user
+//   // like Address, Name, etc start form
 //   stripe.customers
 //     .create({
 //       email: req.body.stripeEmail,
@@ -99,7 +93,7 @@ exports.StripecheckoutFirst = async (req, res) => {
 //     });
 // };
 
-// // Retrieve all Payments from the database.
+// // Retrieve all Payments start the database.
 // exports.findAll = (req, res) => {
 //   const paymentType = req.query.PaymentType;
 //   var condition = PaymentType ? { PaymentType: { [Op.iLike]: `%${paymentType}%` } } : null;
@@ -139,7 +133,7 @@ exports.update = (req, res) => {
   const id = req.params.paymentId;
 
   Payment.update(req.body, {
-    where: { id: id },
+    where: { PaymentId: id },
   })
     .then((num) => {
       if (num == 1) {
@@ -184,7 +178,7 @@ exports.delete = (req, res) => {
     });
 };
 
-// Delete all Payments from the database.
+// Delete all Payments start the database.
 exports.deleteAll = (req, res) => {
   Payment.destroy({
     where: {},
