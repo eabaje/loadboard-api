@@ -311,16 +311,8 @@ exports.findAllDriversByCompany = (req, res) => {
       {
         model: User,
         attributes: ['FullName'],
-      },
-      {
-        model: Vehicle,
-         
-        attributes: ["VehicleNumber"],
-        required: true,
-        // through: {
-        //   attributes: ["VehicleId", "DriverId"],
-        // }
       }
+      
     ],
     order: [['createdAt', 'DESC']],
   })
@@ -340,9 +332,9 @@ exports.findAllDriversByCompany = (req, res) => {
 };
 exports.findAllAssignedDrivers = (req, res) => {
   //  const vehicleId = req.query.VehicleId;
-
-  Driver.findAll({
-    // where: { Assigned: true },
+  const companyId = req.params.companyId;
+  var condition = companyId ? { CompanyId: { [Op.eq]: companyId } } : null;
+  Driver.findAll({  where: condition,
     
     include: [
       {
@@ -451,6 +443,40 @@ exports.findOne = (req, res) => {
       {
         model: User,
         attributes: ['FullName'],
+      }
+      
+    ],
+  })
+
+    .then((data) => {
+      res.status(200).send({
+        message: 'Success',
+        data: data,
+      });
+    })
+    .catch((err) => {
+      console.log(`err`, err);
+      res.status(500).send({
+        message: 'Error retrieving Driver with DriverId=' + id,
+      });
+    });
+};
+
+
+// Find a single Driver with an id
+exports.findOneAssigned = (req, res) => {
+  const id = req.params.driverId;
+
+  Driver.findOne({
+    where: { [Op.or]: [{ DriverId: id }, { UserId: id }] },
+    include: [
+      {
+        model: Company,
+        attributes: ['CompanyName'],
+      },
+      {
+        model: User,
+        attributes: ['FullName'],
       },
       {
         model: Vehicle,
@@ -478,6 +504,7 @@ exports.findOne = (req, res) => {
       });
     });
 };
+
 
 // Update a Driver by the id in the request
 exports.update = (req, res) => {
