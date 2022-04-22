@@ -53,6 +53,9 @@ app.get('/api', (req, res) => {
 app.use(express.static('uploads'));
 app.use('/uploads', express.static('uploads'));
 app.use('/pics', express.static('pics'));
+app.use('/profiles', express.static('profiles'));
+app.use('/vehicles', express.static('vehicles'));
+app.use('/shipments', express.static('shipments'));
 app.use('/docs', express.static('docs'));
 // set port, listen for requests
 //const PORT = process.env.PORT || 8080;
