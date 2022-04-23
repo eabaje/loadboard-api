@@ -13,6 +13,7 @@ const multer = require('multer');
 const multerOpt = require('../middleware/multer');
 const sharp = require('sharp');
 const fs = require('fs');
+const { exit } = require('process');
 sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 const Driver = db.driver;
@@ -25,7 +26,7 @@ const UserRole = db.userrole;
 const Op = db.Sequelize.Op;
 
 // Create and Save a new Driver
-exports.create = async (req, res) => {
+exports.create =  (req, res) => {
   // sharp options
 
   //
@@ -36,27 +37,21 @@ exports.create = async (req, res) => {
   }).then((user) => {
     if (user) {
       return res.status(404).send({ message: 'Email already exists for Driver' });
+      process.exit;
     }
   });
 
-  // const dir = `./uploads/${req.body.CompanyId}/${req.body.Email}`;
-  // fs.exists(dir, (exist) => {
-  //   if (!exist) {
-  //     return fs.mkdir(dir, { recursive: true }, (err, info) => {
-  //          console.log(err);
-  //         });
-  //   }
-  // });
+  
   const picFile = req.files.filePicUrl[0] ? req.files.filePicUrl[0] : null;
 
   const licenseFile = req.files.fileLicenseUrl[0] ? req.files.fileLicenseUrl[0] : null;
 
   const newFileName = picFile.fieldname + '-' + Date.now() + path.extname(picFile.originalname);
-  // const picpath = path.resolve(`uploads/pics/${newFileName}`);
+  
 
-  const picpath = picFile ? `${req.body.CompanyId}/${req.body.Email}/${picFile.originalname}` : '';
+  const picpath = picFile ? `${process.env.PROFILE_IMG_URL}/${req.body.CompanyId}/${req.body.Email}/${picFile.originalname}` : '';
 
-  const licensepath = licenseFile ? `${req.body.CompanyId}/${req.body.Email}/${licenseFile.originalname}` : '';
+  const licensepath = licenseFile ? `${process.env.PROFILE_IMG_URL}/${req.body.CompanyId}/${req.body.Email}/${licenseFile.originalname}` : '';
 
   // await sharp(req.file.buffer).resize(200, 200).toFormat('jpeg').jpeg({ quality: 90 }).toFile(picpath);
 
@@ -523,8 +518,8 @@ exports.update = (req, res) => {
     Licensed: req.body.Licensed,
   };
 
-  console.log('req.params.driverId', req.params.driverId);
-  console.log('req.body', req.body);
+  // console.log('req.params.driverId', req.params.driverId);
+  // console.log('req.body', req.body);
 
   Driver.update(req.body, {
     where: { DriverId: id },
@@ -549,7 +544,7 @@ exports.update = (req, res) => {
 
 // Update a Driver by the id in the request
 exports.updateFile = (req, res) => {
-  console.log('req.body.DriverId', req.body.DriverId);
+ 
   Driver.findOne({
     where: {
       DriverId: req.body.DriverId,
@@ -561,7 +556,7 @@ exports.updateFile = (req, res) => {
       const picpath = uploadFile ? `${driver.CompanyId}/${driver.Email}/${uploadFile.originalname}` : '';
 
       var condition = req.body.FileType === 'image' ? { PicUrl: picpath } : { DriverDocs: picpath };
-      console.log('condition', condition);
+     
       Driver.update(condition, {
         where: { DriverId: req.body.DriverId },
       })
