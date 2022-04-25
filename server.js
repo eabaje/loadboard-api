@@ -82,7 +82,7 @@ app.use('/api/doc', swaggerUi.serve, swaggerUi.setup(swaggerFile));
 //bcrypt.hashSync(req.body.password, 8)
 function initial() {
   const { v1: uuidv1, v4: uuidv4 } = require('uuid');
-  encryptedPassword = bcrypt.hashSync('Web@6790', 8);
+  encryptedPassword = bcrypt.hashSync('Web@2022', 8);
   initialUserId = uuidv4();
   shipperRoleId = uuidv4();
   carrierRoleId = uuidv4();
