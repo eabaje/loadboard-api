@@ -336,14 +336,7 @@ exports.updateFile = (req, res) => {
     }
   });
 
-  // const dir = `./uploads/${req.body.CompanyId}/${req.body.Email}`;
-  // fs.exists(dir, (exist) => {
-  //   if (!exist) {
-  //     return fs.mkdir(dir, { recursive: true }, (err, info) => {
-  //          console.log(err);
-  //         });
-  //   }
-  // });
+ 
 };
 
 exports.changeImageProfile = async (req, res = response) => {
@@ -579,6 +572,51 @@ exports.updateCompany = (req, res) => {
       });
     });
 };
+
+exports.uploadCompanyDoc = (req, res) => {
+  // console.log('req.body.UserId', req.body.UserId);
+  User.findOne({
+    where: {
+      UserId: req.body.UserId,
+    },
+  }).then((user) => {
+    if (user) {
+      console.log('user', user);
+      const uploadFile = req.file ? req.file : null;
+
+      const picpath = uploadFile ? `${user.CompanyId}/${user.Email}/${uploadFile.originalname}` : '';
+
+      var condition = req.body.FileType === 'image' ? { UserPicUrl: picpath } : { UserPicUrl: picpath };
+      console.log('condition', condition);
+      User.update(condition, {
+        where: { UserId: req.body.UserId },
+      })
+        .then((num) => {
+          if (num == 1) {
+            res.send({
+              message: 'File uploaded successfully.',
+            });
+          } else {
+            res.send({
+              message: `Cannot update Driver with id=${id}. Maybe Driver was not found or req.body is empty!`,
+            });
+          }
+        })
+        .catch((err) => {
+          res.status(500).send({
+            message: 'Error updating Driver with id=' + id,
+          });
+        });
+    } else {
+      res.status(500).send({
+        message: 'Error updating the record',
+      });
+    }
+  });
+
+ 
+};
+
 
 exports.findCompany = (req, res) => {
   const id = req.params.companyId;
