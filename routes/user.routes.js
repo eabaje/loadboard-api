@@ -117,6 +117,13 @@ module.exports = function (app) {
 
   app.put('/api/user/updateCompany/:companyId', controller.updateCompany);
 
+  app.post(
+    '/api/user/company/uploadCompanyDoc',
+
+    imageUploader.single('file'),
+    controller.uploadCompanyDoc,
+  );
+
   app.get('/api/user/findCompany/:companyId', controller.findCompany);
 
   app.get('/api/user/findAllCompanys/', controller.findAllCompanys);

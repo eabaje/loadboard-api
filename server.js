@@ -29,10 +29,10 @@ const Subscription = db.subscribe;
 const UserSubscription = db.usersubscription;
 //db.sequelize.sync();
 //force: true will drop the table if it already exists
-// db.sequelize.sync({ force: true }).then(() => {
-//   console.log('Drop and Resync Database with { force: true }');
-//   initial();
-// });
+db.sequelize.sync({ force: true }).then(() => {
+  console.log('Drop and Resync Database with { force: true }');
+  initial();
+});
 
 // app.use(
 //   session({
@@ -125,7 +125,6 @@ function initial() {
     Name: 'auditor',
   });
 
-
   Company.create({
     //  CompanyId: 1,
     CompanyName: 'Global Load Dispatch',
@@ -136,9 +135,6 @@ function initial() {
     City: 'LG',
     Country: 'NG',
   });
-
-  
- 
 
   User.create({
     UserId: initialUserId,
