@@ -5,8 +5,6 @@ const env = process.env.NODE_ENV.trim() || 'development';
 
 const config = require(__dirname + '/../config/config.json')[env];
 
-
-
 //console.log(process.env[config.use_env_variable]);
 
 const isProduction = process.env.NODE_ENV;
@@ -96,7 +94,6 @@ db.vehicle.belongsToMany(db.driver, {
 
 // db.user.hasMany(db.userrole, { foreignKey: { name: 'UserId' } });
 // db.userrole.belongsTo(db.user);
-
 
 db.vehicle.hasOne(db.trip, { foreignKey: 'VehicleId' });
 db.trip.belongsTo(db.vehicle, { foreignKey: 'VehicleId' });

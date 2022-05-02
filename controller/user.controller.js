@@ -336,14 +336,7 @@ exports.updateFile = (req, res) => {
     }
   });
 
-  // const dir = `./uploads/${req.body.CompanyId}/${req.body.Email}`;
-  // fs.exists(dir, (exist) => {
-  //   if (!exist) {
-  //     return fs.mkdir(dir, { recursive: true }, (err, info) => {
-  //          console.log(err);
-  //         });
-  //   }
-  // });
+ 
 };
 
 exports.changeImageProfile = async (req, res = response) => {
@@ -624,6 +617,10 @@ exports.uploadCompanyDoc = (req, res) => {
  
 };
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> a848e34e8b53a358f5b0963e9543bfd23c1f1d5b
 exports.findCompany = (req, res) => {
   const id = req.params.companyId;
 
